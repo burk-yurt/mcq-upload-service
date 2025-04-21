@@ -46,3 +46,7 @@ def download_file(filename):
 @app.route("/debug")
 def debug():
     return jsonify({"status": "ok", "files": os.listdir(SAVE_DIR)})
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
