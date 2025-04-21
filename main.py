@@ -1,11 +1,10 @@
+
 from flask import Flask, request, jsonify, send_from_directory
 import os
 import uuid
 import json
 
 app = Flask(__name__)
-
-# Create a folder to store files
 SAVE_DIR = "files"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
@@ -15,21 +14,35 @@ def home():
 
 @app.route("/upload", methods=["POST"])
 def upload_json():
-    data = request.get_json()
-    if not data or "activities" not in data:
-        return jsonify({"error": "Missing 'activities' field"}), 400
+    try:
+        raw_body = request.get_data(as_text=True)
+        print("🛬 RAW BODY:", raw_body)
 
-    filename = f"mcq_activities_{uuid.uuid4().hex[:8]}.json"
-    filepath = os.path.join(SAVE_DIR, filename)
+        data = request.get_json(force=True)
+        print("🧪 Parsed JSON:", data)
 
-    with open(filepath, "w", encoding="utf-8") as f:
-        json.dump(data["activities"], f, indent=2)
+        if not data or "activities" not in data or not isinstance(data["activities"], list):
+            print("❌ Missing or invalid 'activities'")
+            return jsonify({"error": "Missing or invalid 'activities' list"}), 400
 
-    return jsonify({"downloadUrl": f"/files/{filename}"}), 200
+        filename = f"mcq_activities_{uuid.uuid4().hex[:8]}.json"
+        filepath = os.path.join(SAVE_DIR, filename)
+
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(data["activities"], f, indent=2)
+
+        print(f"✅ File saved: {filename}")
+        full_url = f"https://mcq-upload-service.onrender.com/files/{filename}"
+        return jsonify({"downloadUrl": full_url}), 200
+
+    except Exception as e:
+        print("❌ EXCEPTION:", e)
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/files/<path:filename>")
 def download_file(filename):
     return send_from_directory(SAVE_DIR, filename, as_attachment=True)
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
+@app.route("/debug")
+def debug():
+    return jsonify({"status": "ok", "files": os.listdir(SAVE_DIR)})
