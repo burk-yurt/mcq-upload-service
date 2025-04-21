@@ -11,7 +11,7 @@ os.makedirs(SAVE_DIR, exist_ok=True)
 
 @app.route("/")
 def home():
-    return "MCQ Upload Service is live!"
+    return send_from_directory(".", "README.html")
 
 @app.route("/upload", methods=["POST"])
 def upload_json():
